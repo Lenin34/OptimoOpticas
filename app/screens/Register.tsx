@@ -1,104 +1,339 @@
-// Register.tsx
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useAuth } from '../context/AuthContext';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-
-
-import type { RootStackParamList } from './navigation';
-
-
-type RegisterScreenNavigationProp = NativeStackNavigationProp<
-    RootStackParamList,
-    'Register'
->;
+import React, {useState} from 'react';
+import {View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView} from 'react-native';
+import {useAuth} from '../context/AuthContext';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {Picker} from '@react-native-picker/picker';
+import type {RootStackParamList} from './navigation';
+import {LinearGradient} from "expo-linear-gradient";
+import Toast from 'react-native-toast-message';
+import * as SecureStore from 'expo-secure-store';
 
 const Register = () => {
-    const { onRegister } = useAuth();
-    // Tipamos el hook para que TypeScript reconozca las rutas
-    const navigation = useNavigation<RegisterScreenNavigationProp>();
+    const {onRegister} = useAuth();
+    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Register'>>();
 
+    const [selectedValue, setSelectedValue] = useState<'pub_general' | 'convenio' | 'vacio_'>('vacio_');
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [phone, setPhone] = useState('');
+    const [passwordPub, setPasswordPub] = useState('');
+    const [passwordConv, setPasswordConv] = useState('');
+    const [phoneConv, setPhoneConv] = useState('');
+    const [emailConv, setEmailConv] = useState('');
+    const [selectedCompany, setSelectedCompany] = useState('');
+    const [employeeNumber, setEmployeeNumber] = useState('');
+    const [nameConv, setNameConv] = useState('');
 
     const handleRegister = async () => {
-        if (!email || !password) {
-            Alert.alert('Error', 'Por favor, completa todos los campos');
+        console.log('Inicio de handleRegister', {
+            selectedValue,
+            name,
+            email,
+            phone,
+            passwordPub,
+            employeeNumber,
+            passwordConv,
+            selectedCompany
+        });
+
+        let payload;
+
+        if (selectedValue === 'pub_general') {
+            if (!name || !email || !phone || !passwordPub) {
+                Alert.alert('Error', 'Por favor, completa todos los campos (Público General)');
+                return;
+            }
+            payload = {
+                name,
+                email,
+                number: phone,
+                password: passwordPub
+            };
+        } else if (selectedValue === 'convenio') {
+            if (!nameConv || !employeeNumber || !passwordConv || !selectedCompany) {
+                Alert.alert('Error', 'Por favor, completa todos los campos (Convenio)');
+                return;
+            }
+            payload = {
+                name: nameConv,
+                email: emailConv || null,
+                number: phoneConv,
+                password: passwordConv,
+                company: selectedCompany,
+                employeeNumber: employeeNumber,
+            };
+        } else {
+            Alert.alert('Aviso', 'Selecciona el tipo de usuario');
             return;
         }
 
-        const result = await onRegister!(email, password);
-        if (result && result.error) {
-            Alert.alert('Error', result.msg);
-        } else {
-            Alert.alert('Registro', '¡Registro exitoso!');
-            // Navegar de regreso a la pantalla de Login
-            navigation.navigate('Login');
+        console.log('Payload preparado:', payload);
+
+        try {
+            const result = await onRegister!(payload);
+            console.log('Resultado de onRegister:', result);
+
+            if (result && result.error) {
+                Alert.alert('Error', result.msg);
+                return;
+            }
+
+            if (result.data?.token) {
+                await SecureStore.setItemAsync("token", result.data.token);
+            } else {
+                console.warn('Token no encontrado en la respuesta');
+            }
+
+            Toast.show({
+                type: 'success',
+                text1: '✅ Registro exitoso',
+                visibilityTime: 2000,
+                position: 'bottom',
+            });
+
+            setTimeout(() => {
+                navigation.navigate('Login');
+            }, 2500);
+
+        } catch (error) {
+            console.error('Error en el proceso de registro:', error);
+            Alert.alert('Error', 'Ocurrió un error durante el registro.');
         }
     };
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Crea tu cuenta</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Correo electrónico"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Contraseña"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-            />
-            <TouchableOpacity style={styles.button} onPress={handleRegister}>
-                <Text style={styles.buttonText}>Registrarme</Text>
-            </TouchableOpacity>
+            <LinearGradient
+                            colors={['#124DDE', '#128CDE']}
+                            style={StyleSheet.absoluteFill} />
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                <Text style={styles.title}>REGISTRO</Text>
+
+                <View style={styles.card}>
+                    <Text style={styles.labelOne}>TIPO DE USUARIO</Text>
+                    <View style={styles.pickerContainer}>
+                        <Picker
+                            selectedValue={selectedValue}
+                            onValueChange={(itemValue) => setSelectedValue(itemValue)}
+                            style={styles.picker}
+                            dropdownIconColor="#000"
+                        >
+                            <Picker.Item label="Selecciona un tipo de Usuario" value="vacio_" />
+                            <Picker.Item label="Público en General" value="pub_general" />
+                            <Picker.Item label="Convenio" value="convenio" />
+                        </Picker>
+                    </View>
+                </View>
+
+
+                {selectedValue === 'pub_general' && (
+                    <View style={styles.card}>
+                        <Text style={styles.labelTwo}>NOMBRE</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Nombre"
+                            value={name}
+                            onChangeText={setName}
+                            textAlign="center"
+                        />
+
+                        <Text style={styles.labelTwo}>CORREO ELECTRÓNICO</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Correo electrónico"
+                            value={email}
+                            onChangeText={setEmail}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            textAlign="center"
+                        />
+
+                        <Text style={styles.labelTwo}>NÚMERO DE TELÉFONO</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Número de teléfono"
+                            value={phone}
+                            onChangeText={setPhone}
+                            keyboardType="phone-pad"
+                            textAlign="center"
+                        />
+
+                        <Text style={styles.labelTwo}>CONTRASEÑA</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Contraseña"
+                            value={passwordPub}
+                            onChangeText={setPasswordPub}
+                            secureTextEntry
+                            textAlign="center"
+                        />
+                    </View>
+                )}
+
+                {selectedValue === 'convenio' && (
+                    <View style={styles.card}>
+                        <Text style={styles.labelTwo}>EMPRESA</Text>
+                        <View style={styles.pickerContainer}>
+                            <Picker
+                                selectedValue={selectedCompany}
+                                onValueChange={(itemValue) => setSelectedCompany(itemValue)}
+                                style={styles.picker}
+                                dropdownIconColor="#000"
+                            >
+                                <Picker.Item label="Selecciona tu Empresa" value="" />
+                                <Picker.Item label="Optimo" value="Opt" />
+                                <Picker.Item label="UAM" value="uam" />
+                            </Picker>
+                        </View>
+
+                        <Text style={styles.labelTwo}>NOMBRE</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Nombre"
+                            value={nameConv}
+                            onChangeText={setNameConv}
+                            textAlign="center"
+                        />
+
+                        <Text style={styles.labelTwo}>NÚMERO DE EMPLEADO</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Número de empleado"
+                            value={employeeNumber}
+                            onChangeText={setEmployeeNumber}
+                            keyboardType="phone-pad"
+                            textAlign="center"
+                        />
+
+                        <Text style={styles.labelTwo}>NÚMERO DE TELÉFONO</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Número de teléfono"
+                            value={phoneConv}
+                            onChangeText={setPhoneConv}
+                            keyboardType="phone-pad"
+                            textAlign="center"
+                        />
+
+                        <Text style={styles.labelTwo}>CORREO ELECTRÓNICO</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Correo (opcional)"
+                            value={emailConv}
+                            onChangeText={setEmailConv}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            textAlign="center"
+                        />
+
+                        <Text style={styles.labelTwo}>CONTRASEÑA</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Contraseña"
+                            value={passwordConv}
+                            onChangeText={setPasswordConv}
+                            secureTextEntry
+                            textAlign="center"
+                        />
+                    </View>
+                )}
+
+                <TouchableOpacity style={styles.button} onPress={handleRegister}>
+                    <Text style={styles.buttonText}>Registrarme</Text>
+                </TouchableOpacity>
+                <View style={{ height: 30 }} />
+            </ScrollView>
         </View>
     );
 };
 
 export default Register;
 
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f9fafd',
+    },
+    scrollContent: {
         alignItems: 'center',
-        justifyContent: 'center',
         paddingHorizontal: 20,
+        paddingTop: 40,
+        paddingBottom: 20,
     },
     title: {
-        fontSize: 28,
-        marginBottom: 20,
-        color: '#051d5f',
+        fontSize: 24,
+        marginBottom: 25,
+        color: '#fff',
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+    card: {
+        width: '100%',
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 16,
+        marginVertical: 8,
+
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+
+        elevation: 3,
+    },
+    labelOne: {
+        fontSize: 16,
+        color: '#000',
+        marginBottom: 10,
+        textAlign: 'center',
+        fontWeight: '600',
+    },
+    labelTwo: {
+        fontSize: 14,
+        color: '#000',
+        marginBottom: 4,
+        textAlign: 'left',
+        fontWeight: '500',
+    },
+    pickerContainer: {
+        backgroundColor: '#f9f9f9',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#ccc',
+        marginBottom: 12,
+        width: '100%',
+        height: 50,
+        justifyContent: 'center',
+    },
+    picker: {
+        width: '100%',
+        // Aumenta también la altura aquí
+        height: 50,
+        color: '#000',
+        fontSize: 14, // Asegúrate de tener fontSize para que no se vea muy pequeño
     },
     input: {
         width: '100%',
-        height: 50,
-        backgroundColor: '#fff',
-        padding: 10,
-        borderRadius: 8,
-        marginBottom: 10,
+        height: 38,
+        backgroundColor: '#f9f9f9',
+        marginBottom: 12,
         borderWidth: 1,
         borderColor: '#ccc',
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        fontSize: 14,
     },
     button: {
         width: '100%',
-        backgroundColor: '#2e64e5',
-        padding: 15,
-        borderRadius: 8,
+        backgroundColor: '#fff',
+        paddingVertical: 12,
+        borderRadius: 20,
         alignItems: 'center',
-        marginVertical: 5,
+        marginVertical: 10,
     },
     buttonText: {
-        fontSize: 18,
-        color: '#fff',
+        fontSize: 16,
+        color: '#000',
+        fontWeight: '600',
     },
 });
