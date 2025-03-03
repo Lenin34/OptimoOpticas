@@ -32,7 +32,7 @@ interface RegisterPayload {
 
 const TOKEN_KEY = "token";
 const USER_KEY = "user";
-export const API_URL = "http://192.168.200.216:8000/cliente-api";
+export const API_URL = "http://192.168.1.74:8000/cliente-api";
 
 
 const AuthContext = createContext<AuthContextProps>({});

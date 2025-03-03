@@ -1,21 +1,30 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-// @ts-ignore
-import ImageGroup from "../../assets/Group.png";
 import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+import { API_URL, useAuth } from '../context/AuthContext';
+import { Download } from 'lucide-react-native';
 
 interface Venta {
     idventa: string;
     cliente: string;
-    fecha: { date: string } | string; // Manejo de estructura de fecha
+    fecha: { date: string } | string;
     total: string;
+    Sucursal: string;
 }
 
-const API_URL = "http://192.168.200.216:8000/cliente-api";
+const formatFecha = (fecha: string) => {
+    const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
-const RifaScreen = () => {
+    const fechaObj = new Date(fecha);
+    const dia = fechaObj.getDate().toString().padStart(2, '0');
+    const mes = meses[fechaObj.getMonth()];
+    const anio = fechaObj.getFullYear();
+
+    return `${dia}-${mes}-${anio}`;
+};
+
+const VentasScreen = () => {
     const { authState } = useAuth();
     const [ventas, setVentas] = useState<Venta[]>([]);
     const [loading, setLoading] = useState(true);
@@ -23,26 +32,15 @@ const RifaScreen = () => {
     useEffect(() => {
         const fetchVentas = async () => {
             try {
-                console.log("🔹 AuthState en useEffect:", authState);
-
-                if (!authState?.token) {
-                    console.warn("⛔ No hay token disponible, no se puede hacer la petición.");
+                if (!authState?.token || !authState?.user?.id) {
+                    console.warn("No hay credenciales disponibles.");
                     setLoading(false);
                     return;
                 }
-                if (!authState?.user?.id) {
-                    console.warn("⛔ No hay ID de usuario disponible, no se puede hacer la petición.");
-                    setLoading(false);
-                    return;
-                }
-
-                console.log("📢 Haciendo petición con ID de usuario:", authState.user.id);
-                console.log(`📌 URL de petición: ${API_URL}/get-ventas-app`);
-                console.log(`📌 Token usado: ${authState?.token}`);
 
                 const response = await axios.post(
                     `${API_URL}/get-ventas-app`,
-                    { idcliente: authState.user.id }, // Asegurar que el body tiene el ID
+                    { idcliente: authState.user.id },
                     {
                         headers: {
                             Authorization: `Bearer ${authState.token}`,
@@ -51,18 +49,15 @@ const RifaScreen = () => {
                     }
                 );
 
-                console.log("✅ Respuesta de la API:", response.data);
-
                 if (Array.isArray(response.data)) {
                     setVentas(response.data);
                 } else {
-                    console.warn("⚠️ La respuesta de la API no es un array:", response.data);
+                    console.warn("La respuesta de la API no es un array:", response.data);
                     setVentas([]);
                 }
 
             } catch (error) {
-                // @ts-ignore
-                console.error("❌ Error obteniendo ventas:", error.response?.data || error.message);
+                console.error("Error obteniendo ventas:", error);
             } finally {
                 setLoading(false);
             }
@@ -71,68 +66,90 @@ const RifaScreen = () => {
         fetchVentas();
     }, [authState]);
 
-    const renderBoleto = ({ item }: { item: Venta }) => {
-        // 📌 Manejar la conversión de fecha
+    const renderVenta = ({ item }: { item: Venta }) => {
         let fechaStr = "Fecha no disponible";
+
         if (typeof item.fecha === "string") {
-            fechaStr = item.fecha;
+            fechaStr = formatFecha(item.fecha);
         } else if (item.fecha && typeof item.fecha === "object" && "date" in item.fecha) {
-            fechaStr = item.fecha.date; // Extraer la fecha si está en formato de objeto
+            fechaStr = formatFecha(item.fecha.date);
         }
+        console.log("🔍 Venta recibida en renderBoleto:", item);
 
         return (
             <View style={styles.card}>
-                <Text style={styles.ticketNumber}>🎟️ Boleto: {item.idventa}</Text>
-                <Text style={styles.cliente}>Cliente: {item.cliente}</Text>
-                <Text style={styles.fecha}>📅 {fechaStr}</Text>
-                <Text style={styles.total}>💲 Total: {item.total}</Text>
+                <Text style={styles.fecha}>FECHA: {fechaStr}</Text>
+                <View style={styles.separator} />
+                <View style={styles.infoContainer}>
+                    <View style={styles.infoColumn}>
+                        <Text style={styles.label}>SUCURSAL:</Text>
+                        <Text style={styles.infoText}>{item.Sucursal}</Text>
+                    </View>
+                    <View style={styles.infoColumn}>
+                        <Text style={styles.label}>CLIENTE:</Text>
+                        <Text style={styles.infoText}>{item.cliente}</Text>
+                    </View>
+                </View>
+                <View style={styles.infoContainer}>
+                    <Text style={styles.label}>TOTAL:</Text>
+                    <Text style={styles.totalText}>${item.total}</Text>
+                </View>
+                <TouchableOpacity style={styles.downloadButton}>
+                    <Text style={styles.downloadText}>DESCARGAR PDF</Text>
+                    <Download color="white" size={18} />
+                </TouchableOpacity>
             </View>
         );
     };
 
     return (
-        <LinearGradient
-            colors={['#124DDE', '#128CDE']}
-            style={styles.gradient}>
-            <View style={styles.logoContainer}>
-                <Image source={ImageGroup} style={styles.logoImage} />
-            </View>
+        <LinearGradient colors={['#111921', '#124DDE']} style={styles.gradient}>
+            <Text style={styles.title}>HISTORIAL DE VENTAS</Text>
 
-            <Text style={styles.title}>RIFA - BOLETOS GENERADOS</Text>
-
-            {
-                loading ? (<ActivityIndicator size="large" color="#fff" />) : ventas.length === 0 ?
-                    (<Text style={styles.noVentasText}>No tienes ventas registradas aún.</Text>) :
-                    (
-                        <FlatList
+            {loading ? (
+                <ActivityIndicator size="large" color="#fff" />
+            ) : ventas.length === 0 ? (
+                <Text style={styles.noVentasText}>No tienes ventas registradas aún.</Text>
+            ) : (
+                <FlatList
                     data={ventas}
                     keyExtractor={(item) => item.idventa}
-                    renderItem={renderBoleto}
+                    renderItem={renderVenta}
                     contentContainerStyle={styles.list}
-                        />
-                    )}
-
+                />
+            )}
         </LinearGradient>
     );
 };
 
-export default RifaScreen;
+export default VentasScreen;
 
 const styles = StyleSheet.create({
-    gradient: { flex: 1 },
-    logoContainer: { alignItems: 'center', paddingTop: 20, paddingBottom: 10 },
-    logoImage: { width: 120, height: 80, resizeMode: 'contain' },
-    title: { fontSize: 22, fontWeight: 'bold', color: 'white', textAlign: 'center', marginBottom: 10 },
+    gradient: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
+    title: { fontSize: 22, fontWeight: 'bold', color: 'white', textAlign: 'center', marginBottom: 20 },
     list: { paddingBottom: 20 },
-    card: { backgroundColor: '#444', borderRadius: 10, padding: 12, marginBottom: 10, alignItems: 'center' },
-    ticketNumber: { fontSize: 18, fontWeight: 'bold', color: 'white' },
-    cliente: { fontSize: 14, color: '#bbb' },
-    fecha: { fontSize: 14, color: '#bbb' },
-    total: { fontSize: 14, fontWeight: 'bold', color: '#0d6efd' },
-    noVentasText: {
-        color: 'white',
-        fontSize: 18,
-        textAlign: 'center',
-        marginTop: 20,
+    card: {
+        backgroundColor: '#5A5A5A',
+        borderRadius: 12,
+        padding: 15,
+        marginBottom: 15,
     },
+    fecha: { fontSize: 16, fontWeight: 'bold', color: 'white', textAlign: 'center' },
+    separator: { height: 1, backgroundColor: '#bbb', marginVertical: 8 },
+    infoContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
+    infoColumn: { flex: 1 },
+    label: { fontSize: 14, fontWeight: 'bold', color: 'white' },
+    infoText: { fontSize: 14, color: 'white' },
+    totalText: { fontSize: 14, fontWeight: 'bold', color: 'white' },
+    downloadButton: {
+        flexDirection: 'row',
+        backgroundColor: 'green',
+        paddingVertical: 10,
+        borderRadius: 8,
+        marginTop: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    downloadText: { color: 'white', fontSize: 14, fontWeight: 'bold', marginRight: 5 },
+    noVentasText: { color: 'white', fontSize: 18, textAlign: 'center', marginTop: 20 },
 });
