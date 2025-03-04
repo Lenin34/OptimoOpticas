@@ -11,6 +11,7 @@ import Login from './app/screens/Login';
 import Register from './app/screens/Register';
 import Venta from './app/screens/Venta';
 import Profile from './app/screens/Profile';
+import VerificarCorreo from './app/screens/VerificarCorreo';
 
 
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +22,7 @@ export type RootStackParamList = {
     Home: undefined;
     Venta: undefined;
     Profile: undefined;
+    VerificarCorreo: { phone: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -85,6 +87,7 @@ export const Layout = () => {
                         <>
                             <Stack.Screen name="Login" component={Login} />
                             <Stack.Screen name="Register" component={Register} />
+                            <Stack.Screen name="VerificarCorreo" component={VerificarCorreo} />
                         </>
                     ) : (
                         <Stack.Screen name="Home" component={BottomTabs} />

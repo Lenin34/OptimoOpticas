@@ -106,7 +106,6 @@ const Login = () => {
                 </View>
             </View>
 
-
             <Image source={Iris} style={styles.irisImage} />
         </View>
     );

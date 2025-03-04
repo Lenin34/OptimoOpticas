@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView} from 'react-native';
+import {View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView} from 'react-native';
 import {useAuth} from '../context/AuthContext';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -24,37 +24,74 @@ const Register = () => {
     const [selectedCompany, setSelectedCompany] = useState('');
     const [employeeNumber, setEmployeeNumber] = useState('');
     const [nameConv, setNameConv] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleRegister = async () => {
+        if (isLoading) return;
+        setIsLoading(true);
+
         console.log('Inicio de handleRegister', {
-            selectedValue,
-            name,
-            email,
-            phone,
-            passwordPub,
-            employeeNumber,
-            passwordConv,
-            selectedCompany
+            selectedValue, name, email, phone, passwordPub,
+            employeeNumber, passwordConv, selectedCompany, phoneConv
         });
 
         let payload;
 
+        const isValidEmail = (email: string) => /\S+@\S+\.\S+/.test(email);
+        const isValidPhone = (phone: string) => /^[0-9]{10}$/.test(phone);
+
         if (selectedValue === 'pub_general') {
             if (!name || !email || !phone || !passwordPub) {
-                Alert.alert('Error', 'Por favor, completa todos los campos (Público General)');
+                Toast.show({ type: 'info', text1: 'Cuidado', text2: 'Todos los campos son obligatorios', position: 'bottom' });
+                setIsLoading(false);
                 return;
             }
-            payload = {
-                name,
-                email,
-                number: phone,
-                password: passwordPub
-            };
+
+            if (!isValidEmail(email)) {
+                Toast.show({ type: 'error', text1: 'Correo inválido', text2: 'Ingresa un correo válido', position: 'bottom' });
+                setIsLoading(false);
+                return;
+            }
+
+            if (!isValidPhone(phone)) {
+                Toast.show({ type: 'error', text1: 'Número inválido', text2: 'Debe tener 10 dígitos', position: 'bottom' });
+                setIsLoading(false);
+                return;
+            }
+
+            if (passwordPub.length < 6) {
+                Toast.show({ type: 'error', text1: 'Contraseña débil', text2: 'Debe tener al menos 6 caracteres', position: 'bottom' });
+                setIsLoading(false);
+                return;
+            }
+
+            payload = { name, email, number: phone, password: passwordPub };
+
         } else if (selectedValue === 'convenio') {
-            if (!nameConv || !employeeNumber || !passwordConv || !selectedCompany) {
-                Alert.alert('Error', 'Por favor, completa todos los campos (Convenio)');
+            if (!nameConv || !employeeNumber || !passwordConv || !selectedCompany || !phoneConv) {
+                Toast.show({ type: 'info', text1: 'Cuidado', text2: 'Todos los campos son obligatorios en convenio', position: 'bottom' });
+                setIsLoading(false);
                 return;
             }
+
+            if (!isValidPhone(phoneConv)) {
+                Toast.show({ type: 'error', text1: 'Número inválido', text2: 'Debe tener 10 dígitos', position: 'bottom' });
+                setIsLoading(false);
+                return;
+            }
+
+            if (emailConv && !isValidEmail(emailConv)) {
+                Toast.show({ type: 'error', text1: 'Correo inválido', text2: 'Ingresa un correo válido', position: 'bottom' });
+                setIsLoading(false);
+                return;
+            }
+
+            if (passwordConv.length < 6) {
+                Toast.show({ type: 'error', text1: 'Contraseña débil', text2: 'Debe tener al menos 6 caracteres', position: 'bottom' });
+                setIsLoading(false);
+                return;
+            }
+
             payload = {
                 name: nameConv,
                 email: emailConv || null,
@@ -64,7 +101,8 @@ const Register = () => {
                 employeeNumber: employeeNumber,
             };
         } else {
-            Alert.alert('Aviso', 'Selecciona el tipo de usuario');
+            Toast.show({ type: 'info', text1: 'Aviso', text2: 'Selecciona el tipo de usuario', position: 'bottom' });
+            setIsLoading(false);
             return;
         }
 
@@ -74,33 +112,40 @@ const Register = () => {
             const result = await onRegister!(payload);
             console.log('Resultado de onRegister:', result);
 
-            if (result && result.error) {
-                Alert.alert('Error', result.msg);
-                return;
-            }
+            if (result?.msg === 'Un usuario de convenio ya existe con ese número de teléfono') {
+                Toast.show({
+                    type: 'info',
+                    text1: 'Usuario encontrado',
+                    text2: 'Ingresa tu correo para continuar',
+                    position: 'bottom',
+                });
 
-            if (result.data?.token) {
-                await SecureStore.setItemAsync("token", result.data.token);
-            } else {
-                console.warn('Token no encontrado en la respuesta');
+                navigation.navigate("VerificarCorreo", { phone: phoneConv || phone });
+                setIsLoading(false);
+                return;
             }
 
             Toast.show({
                 type: 'success',
-                text1: '✅ Registro exitoso',
+                text1: 'Registro exitoso',
+                text2: 'Redirigiendo...',
                 visibilityTime: 2000,
                 position: 'bottom',
             });
 
             setTimeout(() => {
                 navigation.navigate('Login');
+                setIsLoading(false);
             }, 2500);
 
         } catch (error) {
             console.error('Error en el proceso de registro:', error);
-            Alert.alert('Error', 'Ocurrió un error durante el registro.');
+            Toast.show({ type: 'error', text1: 'Error', text2: 'Ocurrió un error durante el registro', position: 'bottom' });
+            setIsLoading(false);
         }
     };
+
+
 
     return (
         <View style={styles.container}>
@@ -239,9 +284,16 @@ const Register = () => {
                     </View>
                 )}
 
-                <TouchableOpacity style={styles.button} onPress={handleRegister}>
-                    <Text style={styles.buttonText}>Registrarme</Text>
+                <TouchableOpacity
+                    style={[styles.button, isLoading && styles.buttonDisabled]}
+                    onPress={handleRegister}
+                    disabled={isLoading}
+                >
+                    <Text style={styles.buttonText}>
+                        {isLoading ? 'Procesando...' : 'Registrarme'}
+                    </Text>
                 </TouchableOpacity>
+
                 <View style={{ height: 30 }} />
             </ScrollView>
         </View>
@@ -307,10 +359,9 @@ const styles = StyleSheet.create({
     },
     picker: {
         width: '100%',
-        // Aumenta también la altura aquí
         height: 50,
         color: '#000',
-        fontSize: 14, // Asegúrate de tener fontSize para que no se vea muy pequeño
+        fontSize: 14,
     },
     input: {
         width: '100%',
@@ -336,4 +387,7 @@ const styles = StyleSheet.create({
         color: '#000',
         fontWeight: '600',
     },
+    buttonDisabled: {
+        backgroundColor: '#aaa',
+    }
 });

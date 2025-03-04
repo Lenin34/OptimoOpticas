@@ -3,9 +3,7 @@ import axios from "axios";
 import * as SecureStore from 'expo-secure-store';
 
 
-/**
- * 📌 Interfaz que describe las propiedades y métodos del AuthContext.
- */
+
 interface AuthContextProps {
     authState?: {
         token: string | null;
@@ -13,7 +11,10 @@ interface AuthContextProps {
         user?: {
             id: number;
             name: string;
+            lastname: string | undefined;
+            surname: string | undefined;
             email: string;
+            phone: string;
         } | null;
     };
     onLogin?: (email: string, password: string) => Promise<any>;
@@ -32,7 +33,7 @@ interface RegisterPayload {
 
 const TOKEN_KEY = "token";
 const USER_KEY = "user";
-export const API_URL = "https://sistema.optimoopticas.mx/cliente-api";
+export const API_URL = "http://192.168.200.216:8000/cliente-api";
 
 
 const AuthContext = createContext<AuthContextProps>({});
@@ -83,25 +84,41 @@ export const AuthProvider = ({ children }: any) => {
     }, []);
 
     /**
-     *  Registrar usuario.
+     *  Registrar cliente
      */
     const register = async (payload: RegisterPayload) => {
         try {
-            return await axios.post(`${API_URL}/me`, payload);
+            console.log("datos de registro:", payload);
+            console.log(`URL de petición: ${API_URL}/register`);
+
+            const response = await axios.post(`${API_URL}/register`, payload, {
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+
+            console.log("Respuesta del servidor:", response.data);
+
+            return { error: false, data: response.data };
         } catch (error) {
-            console.error("Error en registro:", error);
-            return { error: true, msg: (error as any).response?.data?.message };
+            // @ts-ignore
+            console.error("Error en registro:", error.response?.data || error.message);
+            // @ts-ignore
+            return { error: true, msg: error.response?.data?.message || "Error en el registro" };
         }
     };
 
 
+    /**
+     *  Login cliente
+     */
 
     const login = async (email: string, password: string) => {
         try {
             console.log("Iniciando login con:", { email, password });
             console.log("URL", `${API_URL}/login_check`);
 
-            // 1) Petición de login para obtener el token
+
             const loginResponse = await axios.post(`${API_URL}/login_check`, { email, password });
             console.log("Respuesta de login_check:", loginResponse.data);
 
@@ -177,9 +194,7 @@ export const AuthProvider = ({ children }: any) => {
         }
     };
 
-    /**
-     * 📌 Proveer valores al contexto de autenticación.
-     */
+
     const value: AuthContextProps = {
         onRegister: register,
         onLogin: login,

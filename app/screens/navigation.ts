@@ -1,7 +1,8 @@
 export type RootStackParamList = {
-    Home: undefined;
     Login: undefined;
     Register: undefined;
+    Home: undefined;
     Venta: undefined;
     Profile: undefined;
+    VerificarCorreo: { phone: string };
 };

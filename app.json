@@ -4,12 +4,32 @@
     "slug": "appOptimoOpticas",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/AppOptimo.png",
+    "backgroundColor": "#124dde",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/AppOptimo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#124dde"
+    },
+    "android": {
+      "package": "com.optimoopticas.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/AppOptimo.png",
+        "backgroundColor": "#124dde"
+      }
+    },
     "plugins": [
       "expo-secure-store"
     ],
     "ios": {
       "supportsTablet": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "df0c124e-0512-412c-8d7e-ea938c82b6ed"
+      }
     }
   }
 }

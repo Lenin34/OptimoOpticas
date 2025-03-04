@@ -130,6 +130,32 @@ const Home = () => {
                     </View>
                 </View>
 
+                <Modal isVisible={isModalVisible} animationIn="fadeInUp" animationOut="fadeOutDown">
+                    <View style={styles.modalContainer}>
+                        <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
+                            <X color="black" size={32} />
+                        </TouchableOpacity>
+
+                        <Image source={RifaImage} style={styles.modalImage} />
+                        <Text style={styles.modalTitle}>¡NO PIERDAS ESTA OPORTUNIDAD!</Text>
+                        <Text style={styles.modalDescription}>
+                            Óptimo Ópticas te premia por tu confianza y preferencia.
+                            Estos son los increíbles premios para ti:
+                        </Text>
+
+
+                        <Text style={styles.rifaInfo}>PRIMERA RIFA: 28 de marzo de 2025</Text>
+                        <Text style={styles.rifaDetails}>1° LUGAR: Una moto</Text>
+                        <Text style={styles.rifaDetails}>2° LUGAR: Un scooter</Text>
+                        <Text style={styles.rifaDetails}>3° LUGAR: Un scooter</Text>
+
+                        <Text style={styles.rifaInfo}>SEGUNDA RIFA: 28 de junio de 2025</Text>
+                        <Text style={styles.rifaDetails}>1° LUGAR: Una moto</Text>
+                        <Text style={styles.rifaDetails}>2° LUGAR: Un scooter</Text>
+                        <Text style={styles.rifaDetails}>3° LUGAR: Un scooter</Text>
+                    </View>
+                </Modal>
+
             </ScrollView>
         </LinearGradient>
     );
@@ -151,8 +177,15 @@ const styles = StyleSheet.create({
     cardRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 45 },
     card: { backgroundColor: '#627192', flex: 1, marginHorizontal: 5, borderRadius: 10, padding: 15, alignItems: 'center' },
     cardTitle: { color: 'white', fontSize: 14, fontWeight: 'bold', marginBottom: 5, marginTop: 8 },
-    boletosCount: { color: 'yellow', fontSize: 30, fontWeight: 'bold', marginVertical: 5 }, // 🔹 Estilo para el número de boletos
+    boletosCount: { color: 'yellow', fontSize: 30, fontWeight: 'bold', marginVertical: 5 },
     cardSubtitle: { color: 'white', fontSize: 12, marginBottom: 10, textAlign: 'center' },
     detailButton: { backgroundColor: 'yellow', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 5, marginTop: 10 },
     detailButtonText: { fontSize: 14, fontWeight: 'bold', textAlign: 'center' },
+    modalContainer: { backgroundColor: '#ffffff', padding: 20, borderRadius: 10, alignItems: 'center'},
+    modalImage: { width: '100%', height: 135, resizeMode: 'contain', borderRadius: 10, marginBottom: 10 },
+    modalTitle: { color: '#000000', fontSize: 20, fontWeight: 'bold', textAlign: 'center', marginBottom: 10 },
+    modalDescription: { color: '#000000', fontSize: 14, textAlign: 'center', marginBottom: 15 },
+    rifaInfo: { fontSize: 16, fontWeight: 'bold', marginTop: 10, color: '#000000' },
+    rifaDetails: { color: '#000000', fontSize: 14 },
+    closeButton: { position: 'absolute', top: 10, right: 4, padding: 5 },
 });
